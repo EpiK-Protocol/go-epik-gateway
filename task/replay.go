@@ -89,6 +89,11 @@ func (t *replayTask) onProcessing() bool {
 	return t.isProcessing
 }
 
+func (t *replayTask) deleteExpert(expert string) {
+	saveDatas(t.storage, ReplayFilesKey, t.files, false)
+	t.deleteRecord(expert)
+}
+
 func (t *replayTask) process(ctx context.Context) error {
 	if t.onProcessing() {
 		return nil
@@ -105,6 +110,7 @@ func (t *replayTask) process(ctx context.Context) error {
 			return err
 		}
 		t.files = files
+
 		log.WithFields(logrus.Fields{
 			"count": len(files),
 		}).Info("load replay data.")
@@ -180,6 +186,8 @@ func (t *replayTask) replayFile(file *FileRef) error {
 	// if record.Index == 1 {
 	// 	record.Line = 0
 	// }
+	// record.Index = 1
+	// record.Line = 0
 
 	fileID, ok := record.History[record.Index]
 	if !ok {
@@ -199,6 +207,10 @@ func (t *replayTask) replayFile(file *FileRef) error {
 	if line == 0 && err == nil {
 		record.Index++
 		record.Line = 0
+		log.WithFields(logrus.Fields{
+			"expert": file.Expert,
+			"index":  record.Index,
+		}).Info("Update record for next file.")
 	}
 	if err != nil {
 		log.WithFields(logrus.Fields{
@@ -212,16 +224,24 @@ func (t *replayTask) replayFile(file *FileRef) error {
 	return t.saveRecord(file.Expert, record)
 }
 
+func RecordKey(expert string) []byte {
+	return []byte("task:replay:record:" + expert)
+}
+
+func (t *replayTask) deleteRecord(expert string) error {
+	return t.storage.Del(RecordKey(expert))
+}
+
 func (t *replayTask) saveRecord(expert string, record *WriteRecord) error {
 	bytes, err := json.Marshal(record)
 	if err != nil {
 		return err
 	}
-	return t.storage.Put([]byte(expert), bytes)
+	return t.storage.Put(RecordKey(expert), bytes)
 }
 
 func (t *replayTask) loadRecord(expert string) (*WriteRecord, error) {
-	bytes, err := t.storage.Get([]byte(expert))
+	bytes, err := t.storage.Get(RecordKey(expert))
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +364,7 @@ func (t *replayTask) writeToNebulaSql(line int64, space string, content string) 
 			}
 			sql = useSql + content
 		}
-		// sql = fmt.Sprintf("DROP SPACE [IF EXISTS] %s;", space)
+		// sql = fmt.Sprintf("DROP SPACE IF EXISTS %s;", space)
 		resultSet, err := session.Execute(sql)
 		if err != nil {
 			return err

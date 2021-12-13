@@ -19,9 +19,13 @@ import (
 )
 
 var (
-	RetrievePageKey  = []byte("task:retrieve:page")
 	RetrieveFilesKey = []byte("task:retrieve")
 )
+
+func RetrievePageKey(expert string) []byte {
+	key := fmt.Sprintf("task:retrieve:page:%s", expert)
+	return []byte(key)
+}
 
 type retrieveTask struct {
 	conf    config.Config
@@ -32,7 +36,7 @@ type retrieveTask struct {
 	files   map[string]*FileRef
 	experts []string
 
-	page uint64
+	page map[string]uint64
 
 	isProcessing bool
 	quitChs      map[string]chan bool
@@ -50,10 +54,10 @@ func newRetrieveTask(conf config.Config, st storage.Storage, bus EventBus.Bus) (
 		storage:      st,
 		bus:          bus,
 		files:        nil,
-		experts:      []string{"f0156987"},
+		experts:      []string{"f01005"},
 		quitChs:      make(map[string]chan bool),
 		isProcessing: false,
-		page:         0,
+		page:         make(map[string]uint64),
 	}
 
 	task.bus.Subscribe(FileEventDownloaded, task.handleNeedDownload)
@@ -93,14 +97,17 @@ func (t *retrieveTask) process(ctx context.Context) error {
 	}()
 
 	if t.files == nil {
-		val, err := t.storage.Get(RetrievePageKey)
-		if err != nil && err != storage.ErrKeyNotFound {
-			return err
-		}
-		if err == storage.ErrKeyNotFound {
-			t.page = 0
-		} else {
-			t.page = byteutils.Uint64(val)
+		for _, expert := range t.experts {
+			// val, err := t.storage.Get(RetrievePageKey(expert))
+			// if err != nil && err != storage.ErrKeyNotFound {
+			// 	return err
+			// }
+			// if err == storage.ErrKeyNotFound {
+			// 	t.page[expert] = 0
+			// } else {
+			// 	t.page[expert] = byteutils.Uint64(val)
+			// }
+			t.page[expert] = 0
 		}
 
 		files, err := loadDatas(t.storage, RetrieveFilesKey)
@@ -121,10 +128,13 @@ func (t *retrieveTask) process(ctx context.Context) error {
 }
 
 func (t *retrieveTask) retrieveData(ctx context.Context) error {
-	if err := t.fetchDatas(false); err != nil {
-		log.WithFields(logrus.Fields{
-			"count": len(t.files),
-		}).Error("failed to fetch retrieve data.")
+	for _, expert := range t.experts {
+		reflesh := false
+		if err := t.fetchDatas(reflesh, expert); err != nil {
+			log.WithFields(logrus.Fields{
+				"count": len(t.files),
+			}).Error("failed to fetch retrieve data.")
+		}
 	}
 
 	for _, file := range t.files {
@@ -183,32 +193,31 @@ func (t *retrieveTask) downloadFile(file *FileRef) error {
 		log.WithFields(logrus.Fields{
 			"fileRef": file,
 		}).Debug("file has downloaded.")
-		return nil
-	}
+	} else {
+		out, err := os.Create(path)
+		defer out.Close()
 
-	out, err := os.Create(path)
-	defer out.Close()
+		resp, err := http.Get(file.Url)
+		defer resp.Body.Close()
 
-	resp, err := http.Get(file.Url)
-	defer resp.Body.Close()
+		// Check server response
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("download bad status: %s", resp.Status)
+		}
 
-	// Check server response
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download bad status: %s", resp.Status)
-	}
+		// Writer the body to file
+		_, err = io.Copy(out, resp.Body)
+		if err != nil {
+			return err
+		}
 
-	// Writer the body to file
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	md5, err = getFileMd5(file.Path)
-	if md5 != file.CheckSum || err != nil {
-		log.WithFields(logrus.Fields{
-			"fileRef": file,
-		}).Error("file download failed.")
-		return nil
+		md5, err = getFileMd5(file.Path)
+		if md5 != file.CheckSum || err != nil {
+			log.WithFields(logrus.Fields{
+				"fileRef": file,
+			}).Error("file download failed.")
+			return nil
+		}
 	}
 
 	file.Status = FileStatusDownloaded
@@ -230,8 +239,8 @@ func (t *retrieveTask) stop() {
 	}
 }
 
-func (t *retrieveTask) fetchDatas(reflesh bool) error {
-	url := fmt.Sprintf("%s/sequence/allFileList?status=send&page=%d", t.conf.Server.RemoteHost, t.page)
+func (t *retrieveTask) fetchDatas(reflesh bool, expert string) error {
+	url := fmt.Sprintf("%s/sequence/allFileList?status=upload&page=%d&expert=%s", t.conf.Server.RemoteHost, t.page[expert], expert)
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
@@ -297,7 +306,7 @@ func (t *retrieveTask) fetchDatas(reflesh bool) error {
 		file.FileSize = data.FileSize
 		file.CheckSum = data.CheckSum
 
-		if file.Status < FileStatusReplaied {
+		if file.Status < FileStatusDownloaded {
 			listChanged = true
 			t.files[data.Id] = file
 			if err := saveFile(t.storage, file); err != nil {
@@ -312,8 +321,8 @@ func (t *retrieveTask) fetchDatas(reflesh bool) error {
 	}
 
 	if listChanged {
-		t.page++
-		t.storage.Put(RetrievePageKey, byteutils.FromUint64(t.page))
+		t.page[expert] = t.page[expert] + 1
+		t.storage.Put(RetrievePageKey(expert), byteutils.FromUint64(t.page[expert]))
 		return saveDatas(t.storage, ReplayFilesKey, t.files, false)
 	}
 	return nil
