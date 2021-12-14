@@ -133,6 +133,7 @@ func (t *replayTask) stop() {
 }
 
 func (t *replayTask) handleReplaies(ctx context.Context) error {
+	return nil
 	for _, file := range t.files {
 		log.WithFields(logrus.Fields{
 			"id":    file.ID,

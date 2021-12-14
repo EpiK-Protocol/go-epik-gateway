@@ -8,7 +8,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/EpiK-Protocol/go-epik-data/api"
 	"github.com/EpiK-Protocol/go-epik-data/app/config"
+	"github.com/EpiK-Protocol/go-epik-data/service"
 	"github.com/EpiK-Protocol/go-epik-data/storage"
 	"github.com/EpiK-Protocol/go-epik-data/task"
 	"github.com/EpiK-Protocol/go-epik-data/utils/logging"
@@ -16,7 +18,13 @@ import (
 	"github.com/asaskevich/EventBus"
 )
 
-var log = logging.Log()
+type IApp interface {
+	Config() config.Config
+	Storage() storage.Storage
+	Service() service.IService
+}
+
+var log *logrus.Logger
 
 // App manages life cycle of services.
 type App struct {
@@ -24,11 +32,17 @@ type App struct {
 
 	config config.Config
 
+	log *logrus.Logger
+
 	storage storage.Storage
 
 	eventBus EventBus.Bus
 
+	api *api.API
+
 	task task.Task
+
+	service service.IService
 
 	lock sync.RWMutex
 
@@ -38,6 +52,8 @@ type App struct {
 // New returns a new app.
 func New(config config.Config) (*App, error) { // init random seed.
 	rand.Seed(time.Now().UTC().UnixNano())
+
+	log = logging.Log()
 
 	// storage
 	st, err := storage.NewBadgerStorage(config.Storage.DBDir)
@@ -52,13 +68,27 @@ func New(config config.Config) (*App, error) { // init random seed.
 	if err != nil {
 		return nil, err
 	}
+
 	a := &App{
 		context:  context.TODO(),
 		config:   config,
+		log:      logging.Log(),
 		storage:  st,
 		eventBus: bus,
 		task:     task,
 	}
+
+	service, err := service.NewService(a)
+	if err != nil {
+		return nil, err
+	}
+	a.service = service
+
+	api, err := api.NewAPI(a)
+	if err != nil {
+		return nil, err
+	}
+	a.api = api
 	return a, nil
 }
 
@@ -87,6 +117,10 @@ func (a *App) Start() error {
 		return err
 	}
 
+	if err := a.api.Start(a.context); err != nil {
+		return err
+	}
+
 	log.Info("Started App.")
 	return nil
 }
@@ -102,6 +136,10 @@ func (a *App) Stop() error {
 		return err
 	}
 
+	if err := a.api.Stop(a.context); err != nil {
+		return err
+	}
+
 	a.running = false
 
 	log.Info("Stopped App.")
@@ -113,7 +151,17 @@ func (n *App) Config() config.Config {
 	return n.config
 }
 
+// Log returns Log reference.
+func (n *App) Log() *logrus.Logger {
+	return n.log
+}
+
 // Storage returns storage reference.
 func (n *App) Storage() storage.Storage {
 	return n.storage
+}
+
+// Service returns service reference.
+func (n *App) Service() service.IService {
+	return n.service
 }

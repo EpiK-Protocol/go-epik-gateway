@@ -32,7 +32,7 @@ type App struct {
 
 type Server struct {
 	// Host string
-	// Port int64
+	Port int64 `yaml:"port"`
 	// Mode string `yaml:"mode"`
 
 	// Name   string `yaml:"name"`

@@ -15,7 +15,8 @@ require (
 	github.com/filecoin-project/go-jsonrpc v0.1.4-0.20210217175800-45ea43ac2bec
 	github.com/filecoin-project/go-multistore v0.0.3
 	github.com/filecoin-project/go-state-types v0.1.0
-	github.com/filecoin-project/specs-actors/v2 v2.3.4
+	github.com/gin-contrib/cors v1.3.1
+	github.com/gin-gonic/gin v1.7.7
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/google/uuid v1.1.2
 	github.com/ipfs/go-cid v0.0.7
