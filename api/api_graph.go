@@ -11,15 +11,16 @@ func (a *API) setGraphAPI() {
 }
 
 func (a *API) GraphQuery(ctx *gin.Context) {
-	// req := &struct {
-	// 	Sql string `json:"sql"`
-	// }{}
-	// if err := ctx.ShouldBindJSON(req); err != nil {
-	// 	responseJSON(ctx, serverError(err))
-	// 	return
-	// }
+	req := &struct {
+		Sql string `json:"sql"`
+	}{}
+	if err := ctx.ShouldBindJSON(req); err != nil {
+		responseJSON(ctx, serverError(err))
+		return
+	}
 
-	sql := ctx.PostForm("sql")
+	sql := req.Sql
+	// sql := ctx.Param("sql")
 
 	log.WithFields(logrus.Fields{
 		"sql": sql,

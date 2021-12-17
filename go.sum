@@ -1444,8 +1444,8 @@ github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6Kllzaw
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/valyala/fasttemplate v1.0.1 h1:tY9CJiPnMXf1ERmG2EyK7gNUd+c6RKGD0IfU8WdUSz8=
 github.com/valyala/fasttemplate v1.0.1/go.mod h1:UQGH1tvbgY+Nz5t2n7tXsz52dQxojPUpymEIMZ47gx8=
-github.com/vesoft-inc/nebula-go/v2 v2.5.1 h1:y4gBQzRqb3W4jeBbbAdtCPxVZ4tXKv9TJLHjNuWGhI0=
-github.com/vesoft-inc/nebula-go/v2 v2.5.1/go.mod h1:fehDUs97/mpmxXi9WezhznX0Dg7hmQRUoOWgDZv9zG0=
+github.com/vesoft-inc/nebula-go/v2 v2.6.0 h1:yS5JH8eNjXtHSZXDRcNihdYaW9FyjOsrpG5iIMkIFBs=
+github.com/vesoft-inc/nebula-go/v2 v2.6.0/go.mod h1:fehDUs97/mpmxXi9WezhznX0Dg7hmQRUoOWgDZv9zG0=
 github.com/viant/assertly v0.4.8/go.mod h1:aGifi++jvCrUaklKEKT0BU95igDNaqkvz+49uaYMPRU=
 github.com/viant/toolbox v0.24.0/go.mod h1:OxMCG57V0PXuIP2HNQrtJf2CjqdmbrOx5EkMILuUhzM=
 github.com/warpfork/go-wish v0.0.0-20180510122957-5ad1f5abf436/go.mod h1:x6AKhvSSexNrVSrViXSHUEbICjmGXhtgABaHIySUSGw=

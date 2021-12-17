@@ -61,7 +61,8 @@ func (a *API) Start(ctx context.Context) error {
 	if err := a.setupRouter(); err != nil {
 		return err
 	}
-	return a.engine.Run(":" + utils.ParseString(a.conf.Server.Port))
+	go a.engine.Run(":" + utils.ParseString(a.conf.Server.Port))
+	return nil
 }
 
 func (a *API) Stop(ctx context.Context) error {

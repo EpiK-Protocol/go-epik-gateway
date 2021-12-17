@@ -73,8 +73,8 @@ func makeNode(ctx *cli.Context) (*app.App, error) {
 }
 
 func runNode(ctx *cli.Context, a *app.App) chan bool {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	c := make(chan os.Signal)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	if err := a.Start(); err != nil {
 		logging.Log().WithFields(logrus.Fields{
@@ -85,15 +85,16 @@ func runNode(ctx *cli.Context, a *app.App) chan bool {
 	quitCh := make(chan bool, 1)
 
 	go func() {
-		<-c
+		select {
+		case <-c:
+			if err := a.Stop(); err != nil {
+				logging.Log().WithFields(logrus.Fields{
+					"err": err,
+				}).Fatal("Failed to stop app.")
+			}
+			quitCh <- true
 
-		if err := a.Stop(); err != nil {
-			logging.Log().WithFields(logrus.Fields{
-				"err": err,
-			}).Fatal("Failed to stop app.")
 		}
-
-		quitCh <- true
 	}()
 
 	return quitCh

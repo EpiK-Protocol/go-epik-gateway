@@ -1,6 +1,8 @@
 package service
 
 import (
+	"encoding/json"
+
 	"github.com/EpiK-Protocol/go-epik-data/app/config"
 	"github.com/sirupsen/logrus"
 	nebula "github.com/vesoft-inc/nebula-go/v2"
@@ -10,6 +12,50 @@ import (
 var (
 	nebLog = nebula.DefaultLogger{}
 )
+
+// Struct used for storing the parsed object
+type JsonObj struct {
+	Results []struct {
+		Columns []string `json:"columns"`
+		Data    []struct {
+			Row  []interface{} `json:"row"`
+			Meta []interface{} `json:"meta"`
+		} `json:"data"`
+		LatencyInUs int    `json:"latencyInUs"`
+		SpaceName   string `json:"spaceName"`
+		PlanDesc    struct {
+			PlanNodeDescs []struct {
+				Name        string `json:"name"`
+				ID          int    `json:"id"`
+				OutputVar   string `json:"outputVar"`
+				Description struct {
+					Key string `json:"key"`
+				} `json:"description"`
+				Profiles []struct {
+					Rows              int `json:"rows"`
+					ExecDurationInUs  int `json:"execDurationInUs"`
+					TotalDurationInUs int `json:"totalDurationInUs"`
+					OtherStats        struct {
+					} `json:"otherStats"`
+				} `json:"profiles"`
+				BranchInfo struct {
+					IsDoBranch      bool `json:"isDoBranch"`
+					ConditionNodeID int  `json:"conditionNodeId"`
+				} `json:"branchInfo"`
+				Dependencies []interface{} `json:"dependencies"`
+			} `json:"planNodeDescs"`
+			NodeIndexMap struct {
+			} `json:"nodeIndexMap"`
+			Format           string `json:"format"`
+			OptimizeTimeInUs int    `json:"optimize_time_in_us"`
+		} `json:"planDesc "`
+		Comment string `json:"comment "`
+	} `json:"results"`
+	Errors []struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	} `json:"errors"`
+}
 
 type NebulasService struct {
 	conf config.Config
@@ -48,73 +94,25 @@ func (s *NebulasService) Query(sql string) (interface{}, error) {
 	}
 	defer session.Release()
 
-	resultSet, err := session.Execute(sql)
+	resultSet, err := session.ExecuteJson(sql)
 	if err != nil {
 		return nil, err
 	}
-	if !resultSet.IsSucceed() {
-		return nil, xerrors.Errorf("nebula execute error sql:%s, code:%d, message:%s", sql, resultSet.GetErrorCode(), resultSet.GetErrorMsg())
-	}
 
-	result := make(map[string]interface{})
-	result["columns"] = resultSet.GetColNames()
-	result["space"] = resultSet.GetSpaceName()
-	result["comment"] = resultSet.GetComment()
+	var jsonObj JsonObj
+	// Parse JSON
+	json.Unmarshal(resultSet, &jsonObj)
 
-	records := make([]string, 0)
-	rowSize := resultSet.GetRowSize()
-	row := 0
-	for row < rowSize {
-		// Get a row from resultSet
-		record, err := resultSet.GetRowValuesByIndex(row)
-		if err != nil {
-			log.Error(err.Error())
-			return nil, err
+	for _, resultErr := range jsonObj.Errors {
+		if resultErr.Code != 0 {
+			return nil, xerrors.Errorf("nebula execute error sql:%s, code:%d, message:%s", sql, resultErr.Code, resultErr.Message)
 		}
-		records = append(records, record.String())
-		row++
 	}
-	result["records"] = records
 
 	log.WithFields(logrus.Fields{
 		"sql":    sql,
-		"result": result,
+		"result": jsonObj,
 	}).Info("nebula query")
 
-	// // Extract data from the resultSet
-	// {
-	// 	// Get all column names from the resultSet
-	// 	colNames := resultSet.GetColNames()
-	// 	fmt.Printf("column names: %s\n", strings.Join(colNames, ", "))
-
-	// 	resultSet.GetRows()
-
-	// 	// Get a row from resultSet
-	// 	record, err := resultSet.GetRowValuesByIndex(0)
-	// 	if err != nil {
-	// 		log.Error(err.Error())
-	// 	}
-	// 	// Print whole row
-	// 	fmt.Printf("row elements: %s\n", record.String())
-	// 	// Get a value in the row by column index
-	// 	valueWrapper, err := record.GetValueByIndex(0)
-	// 	if err != nil {
-	// 		log.Error(err.Error())
-	// 	}
-	// 	// Get type of the value
-	// 	fmt.Printf("valueWrapper type: %s \n", valueWrapper.GetType())
-	// 	// Check if valueWrapper is a string type
-	// 	if valueWrapper.IsString() {
-	// 		// Convert valueWrapper to a string value
-	// 		v1Str, err := valueWrapper.AsString()
-	// 		if err != nil {
-	// 			log.Error(err.Error())
-	// 		}
-	// 		fmt.Printf("Result of ValueWrapper.AsString(): %s\n", v1Str)
-	// 	}
-	// 	// Print ValueWrapper using String()
-	// 	fmt.Printf("Print using ValueWrapper.String(): %s", valueWrapper.String())
-	// }
-
-	return result, nil
+	return jsonObj.Results, nil
 }
