@@ -18,13 +18,12 @@ import (
 	"os"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
 )
 
-//ParseInt 转int
+//ParseInt
 func ParseInt(i interface{}) (val int) {
 	if value, ok := i.(float64); ok {
 		return int(value)
@@ -34,7 +33,7 @@ func ParseInt(i interface{}) (val int) {
 	return val
 }
 
-//ParseInt64 转int64
+//ParseInt64
 func ParseInt64(i interface{}) (val int64) {
 	if value, ok := i.(float64); ok {
 		return int64(value)
@@ -43,13 +42,13 @@ func ParseInt64(i interface{}) (val int64) {
 	return val
 }
 
-//ParseFloat64 转float64
+//ParseFloat64
 func ParseFloat64(i interface{}) (val float64) {
 	val64, _ := strconv.ParseFloat(fmt.Sprintf("%v", i), 64)
 	return val64
 }
 
-//ParseString 转string
+//ParseString
 func ParseString(i interface{}) string {
 	if i == nil {
 		return ""
@@ -58,13 +57,13 @@ func ParseString(i interface{}) string {
 	return val
 }
 
-//Round float精度
+//Round float
 func Round(f float64, n int) float64 {
 	n10 := math.Pow10(n)
 	return math.Trunc((f+0.5/n10)*n10) / n10
 }
 
-//StructToMap Struct转成Map
+//StructToMap
 func StructToMap(obj interface{}) map[string]interface{} {
 	if obj == nil {
 		return nil
@@ -91,7 +90,7 @@ func StructToMap(obj interface{}) map[string]interface{} {
 	return objMap
 }
 
-//MapToStruct 转换
+//MapToStruct
 func MapToStruct(_map map[string]interface{}, obj interface{}) {
 
 	var value reflect.Value
@@ -148,7 +147,7 @@ func BASE64DecodeString(str string) string {
 	return string(result)
 }
 
-//UUIDNewV4 生成UUID
+//UUIDNewV4
 func UUIDNewV4() uuid.UUID {
 	id, err := uuid.NewV4()
 	if err != nil {
@@ -157,19 +156,12 @@ func UUIDNewV4() uuid.UUID {
 	return id
 }
 
-//GenOrderNO 根据用户生成订单号
-func GenOrderNO(uid int64, projectCode string) (no string) {
-	rand := RandomString(CHARCHARACTER, 6)
-	no = fmt.Sprintf("%s%s%06d%s", projectCode, time.Now().Format("20060102150405"), uid, rand)
-	return no
-}
-
 const (
 	CHARNUMBER    = "0123456789"
 	CHARCHARACTER = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 )
 
-//RandomString 随机字符
+//RandomString
 func RandomString(chars string, length int) string {
 	rand.Seed(time.Now().Unix())
 	str := []byte("")
@@ -196,47 +188,6 @@ func UnGzip(data []byte) (result []byte, err error) {
 		return
 	}
 	return ioutil.ReadAll(reader)
-}
-
-//FormatPhoneNum 格式化手机号码
-func FormatPhoneNum(src string, zone string) (phone string, err error) {
-	switch zone {
-	case "cn-zh":
-		switch {
-
-		case len(phone) == 11:
-			_, err := strconv.ParseInt(src, 10, 64)
-			if err != nil {
-				return src, fmt.Errorf("Phone Number Error")
-			}
-			return fmt.Sprintf("+86%s", src), nil
-		case len(phone) == 13:
-			if strings.Index(src, "86") != 0 {
-				return src, fmt.Errorf("Phone Number Error")
-			}
-			_, err := strconv.ParseInt(src, 10, 64)
-			if err != nil {
-				return src, fmt.Errorf("Phone Number Error")
-			}
-			return fmt.Sprintf("+%s", src), nil
-		case len(phone) == 14:
-			if strings.Index(src, "+86") != 0 {
-				return src, fmt.Errorf("Phone Number Error")
-			}
-			_, err := strconv.ParseInt(strings.TrimLeft(src, "+"), 10, 64)
-			if err != nil {
-				return src, fmt.Errorf("Phone Number Error")
-			}
-			return src, nil
-		default:
-			return src, fmt.Errorf("Phone Number Error")
-		}
-	case "cn-hk":
-	case "cn-tw":
-	default:
-		return src, fmt.Errorf("Zone Not Support")
-	}
-	return
 }
 
 func Exists(name string) (bool, error) {

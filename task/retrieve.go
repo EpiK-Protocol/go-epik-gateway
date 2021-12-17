@@ -98,16 +98,16 @@ func (t *retrieveTask) process(ctx context.Context) error {
 
 	if t.files == nil {
 		for _, expert := range t.experts {
-			// val, err := t.storage.Get(RetrievePageKey(expert))
-			// if err != nil && err != storage.ErrKeyNotFound {
-			// 	return err
-			// }
-			// if err == storage.ErrKeyNotFound {
-			// 	t.page[expert] = 0
-			// } else {
-			// 	t.page[expert] = byteutils.Uint64(val)
-			// }
-			t.page[expert] = 0
+			val, err := t.storage.Get(RetrievePageKey(expert))
+			if err != nil && err != storage.ErrKeyNotFound {
+				return err
+			}
+			if err == storage.ErrKeyNotFound {
+				t.page[expert] = 0
+			} else {
+				t.page[expert] = byteutils.Uint64(val)
+			}
+			// t.page[expert] = 0
 		}
 
 		files, err := loadDatas(t.storage, RetrieveFilesKey)
@@ -189,7 +189,7 @@ func (t *retrieveTask) downloadFile(file *FileRef) error {
 	}).Debug("download file.")
 
 	md5, err := getFileMd5(file.Path)
-	if err == nil && md5 == file.CheckSum {
+	if len(file.CheckSum) != 0 && err == nil && md5 == file.CheckSum {
 		log.WithFields(logrus.Fields{
 			"fileRef": file,
 		}).Debug("file has downloaded.")
@@ -211,12 +211,14 @@ func (t *retrieveTask) downloadFile(file *FileRef) error {
 			return err
 		}
 
-		md5, err = getFileMd5(file.Path)
-		if md5 != file.CheckSum || err != nil {
-			log.WithFields(logrus.Fields{
-				"fileRef": file,
-			}).Error("file download failed.")
-			return nil
+		if len(file.CheckSum) != 0 {
+			md5, err = getFileMd5(file.Path)
+			if md5 != file.CheckSum || err != nil {
+				log.WithFields(logrus.Fields{
+					"fileRef": file,
+				}).Error("file download failed.")
+				return nil
+			}
 		}
 	}
 

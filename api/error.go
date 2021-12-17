@@ -2,7 +2,6 @@ package api
 
 import "fmt"
 
-//Code 组装Code
 type Code struct {
 	Code    int64  `json:"code"`
 	Message string `json:"message"`

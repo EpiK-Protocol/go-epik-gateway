@@ -30,8 +30,8 @@ type ListData struct {
 	FileUrl  string `json:"file_url"`
 	Status   string `json:"status"`
 	Count    int64  `json:"count"`
-	FileSize int64  `json:"file_size"` //文件大小
-	CheckSum string `json:"check_sum"` //文件md5
+	FileSize int64  `json:"file_size"` //file size
+	CheckSum string `json:"check_sum"` //file md5
 }
 
 func SignPostParam(secret string, param map[string]interface{}) string {

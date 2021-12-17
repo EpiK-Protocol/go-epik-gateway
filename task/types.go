@@ -8,11 +8,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/EpiK-Protocol/go-epik/chain/actors"
-	"github.com/EpiK-Protocol/go-epik/chain/actors/builtin/expert"
-	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/ipfs/go-cid"
-	"golang.org/x/xerrors"
 )
 
 type Status uint64
@@ -59,8 +55,8 @@ type FileRef struct {
 	ID       string `json:"id,omitempty"`
 	Index    int64  `json:"index,omitempty"`
 	Count    int64  `json:"count,omitempty"`
-	FileSize int64  `json:"file_size,omitempty"` //文件大小
-	CheckSum string `json:"check_sum,omitempty"` //文件md5
+	FileSize int64  `json:"file_size,omitempty"`
+	CheckSum string `json:"check_sum,omitempty"`
 
 	Expert string `json:"expert,omitempty"`
 
@@ -89,63 +85,13 @@ func (f *FileRef) Marshal() ([]byte, error) {
 	return json.Marshal(f)
 }
 
-type TxMsg struct {
-	V int64  `json:"v,omitempty"`
-	T string `json:"t,omitempty"`
-	S string `json:"s,omitempty"`
-	M TxData `json:"m,omitempty"`
-}
-
-type TxData struct {
-	To     string `json:"to,omitempty"`
-	Value  string `json:"value,omitempty"`
-	Method int64  `json:"method,omitempty"`
-	Params []byte `json:"params,omitempty"`
-}
-
-func (f *FileRef) TxMsg() ([]byte, error) {
-
-	expertParams, err := actors.SerializeParams(&expert.BatchImportDataParams{
-		Datas: []expert.ImportDataParams{
-			{
-				RootID:    f.RootCID,
-				PieceID:   f.PieceCID,
-				PieceSize: abi.PaddedPieceSize(f.PieceSize),
-			},
-		},
-	})
-	if err != nil {
-		return nil, xerrors.Errorf("serializing params failed: %w", err)
-	}
-
-	params := TxData{
-		To:     f.Expert,
-		Value:  "0",
-		Method: 5,
-		Params: expertParams,
-	}
-	msg := &TxMsg{
-		V: 1,
-		T: "deal",
-		S: "bls",
-		M: params,
-	}
-
-	mbytes, aerr := json.Marshal(msg)
-	if aerr != nil {
-		return nil, aerr
-	}
-	return mbytes, nil
-}
-
 type Code struct {
 	Code    int64  `json:"code"`
 	Message string `json:"message"`
 }
 
-// 获取文件的md5码
+// returns file md5 checksum
 func getFileMd5(path string) (string, error) {
-	// 文件全路径名
 	pFile, err := os.Open(path)
 	if err != nil {
 		return "", err
