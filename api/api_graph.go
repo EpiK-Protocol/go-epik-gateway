@@ -2,7 +2,6 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 func (a *API) setGraphAPI() {
@@ -22,9 +21,9 @@ func (a *API) GraphQuery(ctx *gin.Context) {
 	sql := req.Sql
 	// sql := ctx.Param("sql")
 
-	log.WithFields(logrus.Fields{
-		"sql": sql,
-	}).Debug("query")
+	// log.WithFields(logrus.Fields{
+	// 	"sql": sql,
+	// }).Debug("query")
 
 	data, err := a.service.Nebula().Query(sql)
 	if err != nil {

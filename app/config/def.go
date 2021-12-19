@@ -65,6 +65,13 @@ type Nebula struct {
 
 var DefaultConfig Config
 
+var (
+	DefaultSSHPort = uint64(22)
+	DefaultSSHUser = "root"
+
+	DefaultServerPort = 8080
+)
+
 func Load(file string) (*Config, error) {
 	bs, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -73,6 +80,18 @@ func Load(file string) (*Config, error) {
 	err = yaml.Unmarshal(bs, &DefaultConfig)
 	if err != nil {
 		return nil, err
+	}
+	if DefaultConfig.Server.Port == 0 {
+		DefaultConfig.Server.Port = int64(DefaultServerPort)
+	}
+
+	for _, chain := range DefaultConfig.Chains {
+		if chain.SSHPort == 0 {
+			chain.SSHPort = DefaultSSHPort
+		}
+		if chain.SSHUser == "" {
+			chain.SSHUser = DefaultSSHUser
+		}
 	}
 	log.WithFields(logrus.Fields{
 		"path": file,
