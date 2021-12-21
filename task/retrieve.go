@@ -149,15 +149,30 @@ func (t *retrieveTask) retrieveData(ctx context.Context) error {
 		// TEST
 		// file.Index = 1
 		// file.Path = "/root/data/d4ae9e27-0b65-4e92-8d17-2a601f8e6511"
-		checkCmd := fmt.Sprintf("test -f %s", file.Path)
+		checkCmd := fmt.Sprintf("mkdir -p %s;test -f %s", t.conf.Storage.DataDir, file.Path)
 		if _, err := utils.SSHRun(conf, checkCmd); err != nil {
 			log.WithFields(logrus.Fields{
 				"id":    file.ID,
 				"error": err,
-			}).Warnf("check file failed.")
-			err = t.retrieveFile(conf, chain, file)
-			if err != nil {
-				return err
+			}).Warnf("remote file not found.")
+
+			if err := t.exportFile(ctx, chain, file); err != nil {
+				log.WithFields(logrus.Fields{
+					"id":      file.ID,
+					"pieceID": file.PieceCID,
+					"rootID":  file.RootCID,
+					"error":   err,
+				}).Warn("failed to export data.")
+				err = t.retrieveFile(conf, chain, file)
+				if err != nil {
+					log.WithFields(logrus.Fields{
+						"id":      file.ID,
+						"pieceID": file.PieceCID,
+						"rootID":  file.RootCID,
+						"error":   err,
+					}).Error("failed to retrieve data.")
+					continue
+				}
 			}
 		}
 		if err := t.downloadFile(conf, file); err != nil {
@@ -193,7 +208,8 @@ func (t *retrieveTask) fetchDatas(ctx context.Context, reflesh bool, expertStr s
 	}
 
 	log.WithFields(logrus.Fields{
-		"count": len(infos),
+		"expert": expertStr,
+		"count":  len(infos),
 	}).Info("fetch download files.")
 
 	t.lk.Lock()
@@ -253,12 +269,34 @@ func (t *retrieveTask) fetchDatas(ctx context.Context, reflesh bool, expertStr s
 	return nil
 }
 
-func (t *retrieveTask) retrieveFile(conf utils.SSHConfig, chain config.Chain, file *FileRef) error {
-	log.Debug("retrieve file.")
-	cmd := fmt.Sprintf("epik client retrieve --pieceCid=%s --miner=%s %s %s", file.PieceCID, chain.Miner, file.RootCID, file.Path)
-	_, err := utils.SSHRun(conf, cmd)
+func (t *retrieveTask) exportFile(ctx context.Context, chain config.Chain, file *FileRef) error {
+	client, closer, err := getFullAPI(ctx, chain)
 	if err != nil {
 		return err
+	}
+	defer closer()
+
+	data, err := client.ClientDealPieceCID(ctx, file.RootCID)
+	if err != nil {
+		return err
+	}
+	if data.PieceCID != file.PieceCID {
+		return fmt.Errorf("failed to parse file pieceID:%s", data.PieceCID)
+	}
+
+	return client.ClientExport(ctx, api.ExportRef{Root: file.RootCID}, api.FileRef{Path: file.Path})
+}
+
+func (t *retrieveTask) retrieveFile(conf utils.SSHConfig, chain config.Chain, file *FileRef) error {
+	cmd := fmt.Sprintf("epik client retrieve --pieceCid=%s --miner=%s %s %s", file.PieceCID, chain.Miner, file.RootCID, file.Path)
+	log.WithFields(logrus.Fields{
+		"cmd":     cmd,
+		"pieceID": file.PieceCID,
+		"rootID":  file.RootCID,
+	}).Debug("retrieve file.")
+	_, err := utils.SSHRun(conf, cmd)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve data. shell:%s, err:%v", cmd, err)
 	}
 
 	return nil

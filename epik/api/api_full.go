@@ -350,6 +350,9 @@ type FullNode interface {
 	// ClientListImports lists imported files and their root CIDs
 	ClientListImports(ctx context.Context) ([]Import, error)
 
+	// ClientExport exports a file stored in the local filestore to a system file
+	ClientExport(ctx context.Context, exportRef ExportRef, fileRef FileRef) error //perm:admin
+
 	//ClientListAsks() []Ask
 
 	// ClientRemove removes file storage from system, returns message cid.
@@ -1179,4 +1182,10 @@ type MsigTransaction struct {
 type ExpertInfo struct {
 	expert.ExpertInfo
 	TotalReward abi.TokenAmount
+}
+
+type ExportRef struct {
+	Root cid.Cid
+
+	DealID retrievalmarket.DealID
 }
