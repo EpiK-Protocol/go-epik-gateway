@@ -25,6 +25,7 @@ var (
 )
 
 type WriteRecord struct {
+	Domain  string
 	Index   int64
 	Line    int64
 	History map[int64]string
@@ -294,6 +295,7 @@ func (t *replayTask) readFileAndWrite(file *FileRef, record *WriteRecord) (int64
 			// 		return line - 1, err
 			// 	}
 			// }
+			record.Domain = domain
 		} else {
 			// if record.Index > index {
 			// 	continue
@@ -313,6 +315,7 @@ func (t *replayTask) readFileAndWrite(file *FileRef, record *WriteRecord) (int64
 				}).Info("expert nebula space.")
 				if space != domain {
 					domain = space
+					record.Domain = domain
 				}
 			}
 			if err := t.writeToNebulaSql(line, domain, content); err != nil {
@@ -331,17 +334,26 @@ func (t *replayTask) readFileAndWrite(file *FileRef, record *WriteRecord) (int64
 	return 0, nil
 }
 
-func (t *replayTask) writeToNebulaSql(line int64, space string, content string) error {
+func (t *replayTask) NebulaPool() (*nebula.ConnectionPool, error) {
 	if t.nebulasPool == nil {
 		host := nebula.HostAddress{Host: t.conf.Nebula.Address, Port: t.conf.Nebula.Port}
 		hostList := []nebula.HostAddress{host}
 		poolConf := nebula.GetDefaultConf()
 		pool, err := nebula.NewConnectionPool(hostList, poolConf, nebLog)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		t.nebulasPool = pool
 	}
+	return t.nebulasPool, nil
+}
+
+func (t *replayTask) writeToNebulaSql(line int64, space string, content string) error {
+	_, err := t.NebulaPool()
+	if err != nil {
+		return err
+	}
+
 	session, err := t.nebulasPool.GetSession(t.conf.Nebula.UserName, t.conf.Nebula.Password)
 	if err != nil {
 		return err
@@ -364,6 +376,18 @@ func (t *replayTask) writeToNebulaSql(line int64, space string, content string) 
 			}
 			sql = useSql + content
 		}
+		if strings.Contains(strings.ToUpper(sql), "CREATE TAG") {
+			strs := strings.Split(content, "(")
+			strs = strings.Split(strs[0], " ")
+			tag := strs[len(strs)-1]
+			sql += fmt.Sprintf("CREATE TAG INDEX IF NOT EXISTS i_value on %s(value(16));", tag)
+		}
+		if strings.Contains(strings.ToUpper(sql), "CREATE EDGE") {
+			strs := strings.Split(content, "(")
+			strs = strings.Split(strs[0], " ")
+			edge := strs[len(strs)-1]
+			sql += fmt.Sprintf("CREATE EDGE INDEX IF NOT EXISTS i_name on %s(name(16));", edge)
+		}
 		// sql = fmt.Sprintf("DROP SPACE IF EXISTS %s;", space)
 		resultSet, err := session.Execute(sql)
 		if err != nil {
@@ -378,3 +402,18 @@ func (t *replayTask) writeToNebulaSql(line int64, space string, content string) 
 	}
 	return nil
 }
+
+// func (t *replayTask) createTagIndex(domain string) error {
+// 	pool, err := t.NebulaPool()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	session, err := pool.GetSession(t.conf.Nebula.UserName, t.conf.Nebula.Password)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer session.Release()
+
+// 	sql := fmt.Sprintf("USE %s, show tags;")
+// 	return nil
+// }

@@ -1,31 +1,31 @@
 package task
 
 import (
+	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/EpiK-Protocol/go-epik-data/app/config"
+	"github.com/EpiK-Protocol/go-epik-data/epik/api"
+	"github.com/EpiK-Protocol/go-epik-data/epik/api/client"
 	"github.com/EpiK-Protocol/go-epik-data/storage"
 	"github.com/EpiK-Protocol/go-epik-data/utils"
-	byteutils "github.com/EpiK-Protocol/go-epik-data/utils/bytesutils"
+	"github.com/EpiK-Protocol/go-epik/chain/types"
 	"github.com/asaskevich/EventBus"
+	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-jsonrpc"
+	"github.com/ipfs/go-cid"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
 )
 
 var (
 	RetrieveFilesKey = []byte("task:retrieve")
 )
-
-func RetrievePageKey(expert string) []byte {
-	key := fmt.Sprintf("task:retrieve:page:%s", expert)
-	return []byte(key)
-}
 
 type retrieveTask struct {
 	conf    config.Config
@@ -54,7 +54,7 @@ func newRetrieveTask(conf config.Config, st storage.Storage, bus EventBus.Bus) (
 		storage:      st,
 		bus:          bus,
 		files:        nil,
-		experts:      []string{"f01005"},
+		experts:      conf.Server.Experts,
 		quitChs:      make(map[string]chan bool),
 		isProcessing: false,
 		page:         make(map[string]uint64),
@@ -97,19 +97,6 @@ func (t *retrieveTask) process(ctx context.Context) error {
 	}()
 
 	if t.files == nil {
-		for _, expert := range t.experts {
-			val, err := t.storage.Get(RetrievePageKey(expert))
-			if err != nil && err != storage.ErrKeyNotFound {
-				return err
-			}
-			if err == storage.ErrKeyNotFound {
-				t.page[expert] = 0
-			} else {
-				t.page[expert] = byteutils.Uint64(val)
-			}
-			// t.page[expert] = 0
-		}
-
 		files, err := loadDatas(t.storage, RetrieveFilesKey)
 		if err != nil {
 			return err
@@ -129,8 +116,7 @@ func (t *retrieveTask) process(ctx context.Context) error {
 
 func (t *retrieveTask) retrieveData(ctx context.Context) error {
 	for _, expert := range t.experts {
-		reflesh := false
-		if err := t.fetchDatas(reflesh, expert); err != nil {
+		if err := t.fetchDatas(ctx, false, expert); err != nil {
 			log.WithFields(logrus.Fields{
 				"count": len(t.files),
 			}).Error("failed to fetch retrieve data.")
@@ -141,30 +127,128 @@ func (t *retrieveTask) retrieveData(ctx context.Context) error {
 		if file.Status >= FileStatusDownloaded {
 			continue
 		}
-		// chain := t.conf.Chains[0]
 
-		// conf := utils.SSHConfig{
-		// 	IP:             chain.SSHHost,
-		// 	Port:           chain.SSHPort,
-		// 	UserName:       chain.SSHUser,
-		// 	Password:       "",
-		// 	PrivateKeyPath: t.conf.App.KeyPath,
-		// }
+		exist, err := utils.Exists(file.LocalPath)
+		if err != nil {
+			return err
+		}
+		if exist {
+			return t.updateFileStatus(file)
+		}
+
+		chain := t.conf.Chains[0]
+
+		conf := utils.SSHConfig{
+			IP:             chain.SSHHost,
+			Port:           chain.SSHPort,
+			UserName:       chain.SSHUser,
+			Password:       "",
+			PrivateKeyPath: t.conf.App.KeyPath,
+		}
 
 		// TEST
 		// file.Index = 1
 		// file.Path = "/root/data/d4ae9e27-0b65-4e92-8d17-2a601f8e6511"
-		// checkCmd := fmt.Sprintf("test -f %s", file.Path)
-		// if _, err := utils.SSHRun(conf, checkCmd); err != nil {
-		// 	log.WithFields(logrus.Fields{
-		// 		"id":    file.ID,
-		// 		"error": err,
-		// 	}).Warnf("check file failed.")
-		// 	t.retrieveFile(conf, chain, file)
-		// }
-		if err := t.downloadFile(file); err != nil {
+		checkCmd := fmt.Sprintf("test -f %s", file.Path)
+		if _, err := utils.SSHRun(conf, checkCmd); err != nil {
+			log.WithFields(logrus.Fields{
+				"id":    file.ID,
+				"error": err,
+			}).Warnf("check file failed.")
+			err = t.retrieveFile(conf, chain, file)
+			if err != nil {
+				return err
+			}
+		}
+		if err := t.downloadFile(conf, file); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (t *retrieveTask) fetchDatas(ctx context.Context, reflesh bool, expertStr string) error {
+
+	expert, err := address.NewFromString(expertStr)
+	if err != nil {
+		return err
+	}
+	chain := t.conf.Chains[0]
+	client, closer, err := getFullAPI(ctx, chain)
+	if err != nil {
+		return err
+	}
+	defer closer()
+
+	infos, err := client.StateExpertDatas(ctx, expert, nil, false, types.EmptyTSK)
+	if err != nil {
+		return err
+	}
+	// log.WithFields(logrus.Fields{
+	// 	"url":   url,
+	// 	"count": len(respData.List),
+	// }).Debug("fetch download files.")
+	if len(infos) == 0 {
+		return nil
+	}
+
+	log.WithFields(logrus.Fields{
+		"count": len(infos),
+	}).Info("fetch download files.")
+
+	t.lk.Lock()
+	defer t.lk.Unlock()
+	listChanged := false
+	for _, info := range infos {
+		file, err := loadFile(t.storage, info.PieceID)
+		if err != nil {
+			if err == storage.ErrKeyNotFound {
+				file = &FileRef{
+					ID:     info.PieceID,
+					Status: FileStatusNew,
+				}
+			} else {
+				return err
+			}
+		}
+
+		if reflesh && file.Status >= FileStatusDownloaded {
+			file.Status = FileStatusNew
+		}
+
+		pieceID, err := cid.Parse(info.PieceID)
+		if err != nil {
+			return err
+		}
+
+		rootID, err := cid.Parse(info.RootID)
+		if err != nil {
+			return err
+		}
+
+		file.Expert = expertStr
+		file.PieceCID = pieceID
+		file.RootCID = rootID
+		file.FileSize = int64(info.PieceSize)
+		file.Path = fmt.Sprintf("%s/%s", t.conf.Storage.DataDir, file.PieceCID)
+		file.LocalPath = file.Path
+
+		if file.Status < FileStatusDownloaded {
+			listChanged = true
+			t.files[file.ID] = file
+			if err := saveFile(t.storage, file); err != nil {
+				return err
+			}
+
+			log.WithFields(logrus.Fields{
+				"resp": info,
+				"file": file,
+			}).Info("add download files.")
+		}
+	}
+
+	if listChanged {
+		return saveDatas(t.storage, RetrieveFilesKey, t.files, false)
 	}
 	return nil
 }
@@ -180,48 +264,34 @@ func (t *retrieveTask) retrieveFile(conf utils.SSHConfig, chain config.Chain, fi
 	return nil
 }
 
-func (t *retrieveTask) downloadFile(file *FileRef) error {
-	path := fmt.Sprintf("%s/%s", t.conf.Storage.DataDir, file.ID)
-	file.Path = path
-
-	log.WithFields(logrus.Fields{
-		"path": file.Path,
-	}).Debug("download file.")
-
-	md5, err := getFileMd5(file.Path)
-	if len(file.CheckSum) != 0 && err == nil && md5 == file.CheckSum {
-		log.WithFields(logrus.Fields{
-			"fileRef": file,
-		}).Debug("file has downloaded.")
-	} else {
-		out, err := os.Create(path)
-		defer out.Close()
-
-		resp, err := http.Get(file.Url)
-		defer resp.Body.Close()
-
-		// Check server response
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("download bad status: %s", resp.Status)
-		}
-
-		// Writer the body to file
-		_, err = io.Copy(out, resp.Body)
-		if err != nil {
-			return err
-		}
-
-		if len(file.CheckSum) != 0 {
-			md5, err = getFileMd5(file.Path)
-			if md5 != file.CheckSum || err != nil {
-				log.WithFields(logrus.Fields{
-					"fileRef": file,
-				}).Error("file download failed.")
-				return nil
-			}
-		}
+func (t *retrieveTask) downloadFile(conf utils.SSHConfig, file *FileRef) error {
+	exist, err := utils.Exists(file.LocalPath)
+	if err != nil {
+		return err
+	}
+	if exist {
+		return nil
 	}
 
+	err = utils.SCPFile(conf, file.Path, file.LocalPath)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"id":        file.ID,
+			"path":      file.Path,
+			"localPath": file.LocalPath,
+			"error":     err,
+		}).Error("replay copy file failed.")
+		return err
+	}
+	return t.updateFileStatus(file)
+}
+
+func (t *retrieveTask) updateFileStatus(file *FileRef) error {
+	index, err := parseFileIndex(file.LocalPath)
+	if err != nil {
+		return err
+	}
+	file.Index = int64(index)
 	file.Status = FileStatusDownloaded
 	err = saveFile(t.storage, file)
 	if err != nil {
@@ -241,91 +311,37 @@ func (t *retrieveTask) stop() {
 	}
 }
 
-func (t *retrieveTask) fetchDatas(reflesh bool, expert string) error {
-	url := fmt.Sprintf("%s/sequence/allFileList?status=upload&page=%d&expert=%s", t.conf.Server.RemoteHost, t.page[expert], expert)
-	resp, err := http.Get(url)
+func parseFileIndex(file string) (int, error) {
+	fi, err := os.Open(file)
 	if err != nil {
-		return err
+		return 0, err
 	}
+	defer fi.Close()
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	br := bufio.NewReader(fi)
+	content, _, err := br.ReadLine()
 	if err != nil {
-		return err
+		return 0, err
 	}
-
-	var respData ListResponse
-	if err := json.Unmarshal(body, &respData); err != nil {
-		return err
+	headers := strings.Split(string(content), ",")
+	// domains := strings.Split(headers[0], ":")
+	// domain = strings.TrimSpace(domains[1])
+	indexs := strings.Split(headers[1], ":")
+	i, err := strconv.Atoi(indexs[1])
+	if err != nil {
+		return 0, err
 	}
-	// log.WithFields(logrus.Fields{
-	// 	"url":   url,
-	// 	"count": len(respData.List),
-	// }).Debug("fetch download files.")
-	if len(respData.List) == 0 {
-		return nil
+	return i, nil
+}
+
+func getFullAPI(ctx context.Context, chain config.Chain) (api.FullNode, jsonrpc.ClientCloser, error) {
+	ainfo := api.APIInfo{
+		Addr:  chain.RPCHost,
+		Token: []byte(chain.RPCToken),
 	}
-
-	log.WithFields(logrus.Fields{
-		"count": len(respData.List),
-	}).Info("fetch download files.")
-
-	t.lk.Lock()
-	defer t.lk.Unlock()
-	listChanged := false
-	for _, data := range respData.List {
-		file, err := loadFile(t.storage, data.Id)
-		if err != nil {
-			if err == storage.ErrKeyNotFound {
-				file = &FileRef{
-					ID:     data.Id,
-					Status: FileStatusNew,
-				}
-			} else {
-				return err
-			}
-		}
-
-		if reflesh && file.Status >= FileStatusDownloaded {
-			file.Status = FileStatusNew
-		}
-
-		found := false
-		for _, expert := range t.experts {
-			if expert == data.Expert {
-				found = true
-				break
-			}
-		}
-		if !found {
-			continue
-		}
-
-		file.Index = data.Index
-		file.Count = data.Count
-		file.Url = data.FileUrl
-		file.Expert = data.Expert
-		file.FileSize = data.FileSize
-		file.CheckSum = data.CheckSum
-
-		if file.Status < FileStatusDownloaded {
-			listChanged = true
-			t.files[data.Id] = file
-			if err := saveFile(t.storage, file); err != nil {
-				return err
-			}
-
-			log.WithFields(logrus.Fields{
-				"resp": data,
-				"file": file,
-			}).Info("add download files.")
-		}
+	addr, err := ainfo.DialArgs()
+	if err != nil {
+		return nil, nil, xerrors.Errorf("could not get DialArgs: %w", err)
 	}
-
-	if listChanged {
-		t.page[expert] = t.page[expert] + 1
-		t.storage.Put(RetrievePageKey(expert), byteutils.FromUint64(t.page[expert]))
-		return saveDatas(t.storage, ReplayFilesKey, t.files, false)
-	}
-	return nil
+	return client.NewFullNodeRPC(ctx, addr, ainfo.AuthHeader())
 }

@@ -52,8 +52,9 @@ type Task interface {
 }
 
 type FileRef struct {
-	ID       string `json:"id,omitempty"`
-	Index    int64  `json:"index,omitempty"`
+	ID    string `json:"id,omitempty"`
+	Index int64  `json:"index,omitempty"`
+
 	Count    int64  `json:"count,omitempty"`
 	FileSize int64  `json:"file_size,omitempty"`
 	CheckSum string `json:"check_sum,omitempty"`
@@ -61,7 +62,8 @@ type FileRef struct {
 	Expert string `json:"expert,omitempty"`
 
 	// file saved path on node machine
-	Path string `json:"path,omitempty"`
+	Path      string `json:"path,omitempty"`
+	LocalPath string `json:"local_path,omitempty"`
 
 	// file info
 	RootCID   cid.Cid `json:"root_cid,omitempty"`

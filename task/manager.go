@@ -78,7 +78,7 @@ func (t *TaskManager) process(ctx context.Context) {
 			}
 		}()
 
-		if next := t.niceSleep(15 * time.Second); !next {
+		if next := t.niceSleep(3 * 60 * time.Second); !next {
 			return
 		}
 	}

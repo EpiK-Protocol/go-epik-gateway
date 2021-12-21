@@ -33,12 +33,8 @@ type App struct {
 type Server struct {
 	// Host string
 	Port int64 `yaml:"port"`
-	// Mode string `yaml:"mode"`
 
-	// Name   string `yaml:"name"`
-	// LogDir string `yaml:"log_dir"`
-	RemoteHost string `yaml:"remote_host"`
-	AppSecret  string `yaml:"app_secret"`
+	Experts []string `yaml:"experts"`
 }
 
 type Storage struct {
@@ -47,9 +43,10 @@ type Storage struct {
 }
 
 type Chain struct {
-	SSHHost string `yaml:"ssh_host"`
-	SSHPort uint64 `yaml:"ssh_port"`
-	SSHUser string `yaml:"ssh_user"`
+	SSHHost     string `yaml:"ssh_host"`
+	SSHPort     uint64 `yaml:"ssh_port"`
+	SSHUser     string `yaml:"ssh_user"`
+	SSHPassword string `yaml:"ssh_password"`
 
 	Miner    string `yaml:"miner"`
 	RPCHost  string `yaml:"rpc_host"`
