@@ -60,7 +60,6 @@ func newRetrieveTask(conf config.Config, st storage.Storage, bus EventBus.Bus) (
 		page:         make(map[string]uint64),
 	}
 
-	task.bus.Subscribe(FileEventDownloaded, task.handleNeedDownload)
 	return task, nil
 }
 
@@ -311,7 +310,7 @@ func (t *retrieveTask) downloadFile(conf utils.SSHConfig, file *FileRef) error {
 		return nil
 	}
 
-	err = utils.SCPFile(conf, file.Path, file.LocalPath)
+	err = utils.SCPFileFromRemote(conf, file.Path, file.LocalPath)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"id":        file.ID,

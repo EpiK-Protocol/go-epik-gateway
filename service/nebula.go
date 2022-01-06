@@ -13,48 +13,54 @@ var (
 	nebLog = nebula.DefaultLogger{}
 )
 
+type ResultData struct {
+	Row  []interface{} `json:"row"`
+	Meta []interface{} `json:"meta"`
+}
+
+type Result struct {
+	Columns     []string     `json:"columns"`
+	Data        []ResultData `json:"data"`
+	LatencyInUs int          `json:"latencyInUs"`
+	SpaceName   string       `json:"spaceName"`
+	PlanDesc    struct {
+		PlanNodeDescs []struct {
+			Name        string `json:"name"`
+			ID          int    `json:"id"`
+			OutputVar   string `json:"outputVar"`
+			Description struct {
+				Key string `json:"key"`
+			} `json:"description"`
+			Profiles []struct {
+				Rows              int `json:"rows"`
+				ExecDurationInUs  int `json:"execDurationInUs"`
+				TotalDurationInUs int `json:"totalDurationInUs"`
+				OtherStats        struct {
+				} `json:"otherStats"`
+			} `json:"profiles"`
+			BranchInfo struct {
+				IsDoBranch      bool `json:"isDoBranch"`
+				ConditionNodeID int  `json:"conditionNodeId"`
+			} `json:"branchInfo"`
+			Dependencies []interface{} `json:"dependencies"`
+		} `json:"planNodeDescs"`
+		NodeIndexMap struct {
+		} `json:"nodeIndexMap"`
+		Format           string `json:"format"`
+		OptimizeTimeInUs int    `json:"optimize_time_in_us"`
+	} `json:"planDesc "`
+	Comment string `json:"comment "`
+}
+
+type ResultError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
 // Struct used for storing the parsed object
-type JsonObj struct {
-	Results []struct {
-		Columns []string `json:"columns"`
-		Data    []struct {
-			Row  []interface{} `json:"row"`
-			Meta []interface{} `json:"meta"`
-		} `json:"data"`
-		LatencyInUs int    `json:"latencyInUs"`
-		SpaceName   string `json:"spaceName"`
-		PlanDesc    struct {
-			PlanNodeDescs []struct {
-				Name        string `json:"name"`
-				ID          int    `json:"id"`
-				OutputVar   string `json:"outputVar"`
-				Description struct {
-					Key string `json:"key"`
-				} `json:"description"`
-				Profiles []struct {
-					Rows              int `json:"rows"`
-					ExecDurationInUs  int `json:"execDurationInUs"`
-					TotalDurationInUs int `json:"totalDurationInUs"`
-					OtherStats        struct {
-					} `json:"otherStats"`
-				} `json:"profiles"`
-				BranchInfo struct {
-					IsDoBranch      bool `json:"isDoBranch"`
-					ConditionNodeID int  `json:"conditionNodeId"`
-				} `json:"branchInfo"`
-				Dependencies []interface{} `json:"dependencies"`
-			} `json:"planNodeDescs"`
-			NodeIndexMap struct {
-			} `json:"nodeIndexMap"`
-			Format           string `json:"format"`
-			OptimizeTimeInUs int    `json:"optimize_time_in_us"`
-		} `json:"planDesc "`
-		Comment string `json:"comment "`
-	} `json:"results"`
-	Errors []struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	} `json:"errors"`
+type ResultSet struct {
+	Results []Result      `json:"results"`
+	Errors  []ResultError `json:"errors"`
 }
 
 type NebulasService struct {
@@ -84,7 +90,7 @@ func (s *NebulasService) generatePool() error {
 	return nil
 }
 
-func (s *NebulasService) Query(sql string) (interface{}, error) {
+func (s *NebulasService) Query(sql string) ([]Result, error) {
 	if err := s.generatePool(); err != nil {
 		return nil, err
 	}
@@ -99,7 +105,7 @@ func (s *NebulasService) Query(sql string) (interface{}, error) {
 		return nil, err
 	}
 
-	var jsonObj JsonObj
+	var jsonObj ResultSet
 	// Parse JSON
 	json.Unmarshal(resultSet, &jsonObj)
 

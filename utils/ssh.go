@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	scp "github.com/bramvdbogaerde/go-scp"
@@ -51,8 +52,36 @@ func SCPFile(conf SSHConfig, srcFile string, destFile string) error {
 		return err
 	}
 
+	// Close client connection after the file has been copied
+	defer client.Close()
+
 	// Open a file
-	f, err := os.Create(destFile)
+	f, err := os.Open(srcFile)
+	if err != nil {
+		return err
+	}
+
+	// Close the file after it has been copied
+	defer f.Close()
+
+	// Finaly, copy the file over
+	// Usage: CopyFile(fileReader, remotePath, permission)
+	err = client.CopyFromFile(*f, destFile, "0655")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func SCPFileFromRemote(conf SSHConfig, srcFile string, destFile string) error {
+	s := NewSSH(conf)
+	if s.client == nil {
+		if err := s.connect(); err != nil {
+			return err
+		}
+	}
+
+	client, err := scp.NewClientBySSH(s.client)
 	if err != nil {
 		return err
 	}
@@ -60,12 +89,18 @@ func SCPFile(conf SSHConfig, srcFile string, destFile string) error {
 	// Close client connection after the file has been copied
 	defer client.Close()
 
+	// Open a file
+	f, err := os.Create(destFile)
+	if err != nil {
+		return err
+	}
+
 	// Close the file after it has been copied
 	defer f.Close()
 
 	// Finaly, copy the file over
 	// Usage: CopyFile(fileReader, remotePath, permission)
-	err = client.CopyFile(f, srcFile, "0655")
+	err = client.CopyFromRemote(f, srcFile)
 	if err != nil {
 		return err
 	}
@@ -87,7 +122,7 @@ func (s *SSHClient) Run(shell string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	s.Result = string(buf)
+	s.Result = strings.TrimSpace(string(buf))
 	return s.Result, nil
 }
 

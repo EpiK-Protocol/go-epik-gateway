@@ -65,6 +65,7 @@ func newReplayTask(conf config.Config, st storage.Storage, bus EventBus.Bus) (*r
 	}
 
 	task.bus.Subscribe(FileEventDownloaded, task.handleStoraged)
+
 	return task, nil
 }
 
@@ -334,6 +335,11 @@ func (t *replayTask) readFileAndWrite(file *FileRef, record *WriteRecord) (int64
 	return 0, nil
 }
 
+func (t *replayTask) dropSpace(space string) error {
+	sql := fmt.Sprintf("DROP SPACE IF EXISTS %s;", space)
+	return t.writeToNebulaSql(0, space, sql)
+}
+
 func (t *replayTask) NebulaPool() (*nebula.ConnectionPool, error) {
 	if t.nebulasPool == nil {
 		host := nebula.HostAddress{Host: t.conf.Nebula.Address, Port: t.conf.Nebula.Port}
@@ -380,13 +386,13 @@ func (t *replayTask) writeToNebulaSql(line int64, space string, content string) 
 			strs := strings.Split(content, "(")
 			strs = strings.Split(strs[0], " ")
 			tag := strs[len(strs)-1]
-			sql += fmt.Sprintf("CREATE TAG INDEX IF NOT EXISTS i_value on %s(value(16));", tag)
+			sql += fmt.Sprintf("CREATE TAG INDEX IF NOT EXISTS i_%s_value on %s(value(16));", tag, tag)
 		}
 		if strings.Contains(strings.ToUpper(sql), "CREATE EDGE") {
 			strs := strings.Split(content, "(")
 			strs = strings.Split(strs[0], " ")
 			edge := strs[len(strs)-1]
-			sql += fmt.Sprintf("CREATE EDGE INDEX IF NOT EXISTS i_name on %s(name(16));", edge)
+			sql += fmt.Sprintf("CREATE EDGE INDEX IF NOT EXISTS i_%s_name on %s(name(16));", edge, edge)
 		}
 		// sql = fmt.Sprintf("DROP SPACE IF EXISTS %s;", space)
 		resultSet, err := session.Execute(sql)
