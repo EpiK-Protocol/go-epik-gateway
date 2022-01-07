@@ -4,6 +4,15 @@ EpiK Gateway will help you retrieve and index AI data from EpiK Protocol network
 
 ## Usage
 
+### Start EpiK Node
+Graph data is stored in EpiK's node. Epik's Mainnet nodes need to be installed and synchronized before use. Refer to the node documentation for starting the [Mainnet](https://github.com/EpiK-Protocol/go-epik/wiki/How-to-join-Mainnet).
+
+#### add EPK pledge for data retrieve.
+After the node is started, a data index pledge needs to be added to the default wallet. Refer to the pledge document for data index [pledge](https://github.com/EpiK-Protocol/go-epik/wiki/How-to-join-Mainnet#8-pledge-for-retrieval).
+
+### Start Nebula Database
+After the graph data is indexed from the node, it needs to be stored in the graph database. EpiK uses Nebula as its diagram database. Install the [Nebula](https://docs.nebula-graph.io/2.6.1/) database before starting the node.
+
 ### Build 
 Build your gateway node with [go](https://go.dev/) installed.
 
@@ -12,7 +21,7 @@ make
 ```
 
 ### Config
-Your gateway node needs to be connected with an [EpiK](https://github.com/epiK-Protocol/go-epik) node and a [NEBULA](https://docs.nebula-graph.com.cn/2.6.1/) node to retrieve AI data from EpiK Protocol network and import it into a nebula graph database.
+Your gateway node needs to be connected with an [EpiK](https://github.com/epiK-Protocol/go-epik) node and a [NEBULA](https://docs.nebula-graph.io/2.6.1/) node to retrieve AI data from EpiK Protocol network and import it into a nebula graph database.
 
 ```
 # gateway node
