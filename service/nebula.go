@@ -3,7 +3,7 @@ package service
 import (
 	"encoding/json"
 
-	"github.com/EpiK-Protocol/go-epik-data/app/config"
+	"github.com/EpiK-Protocol/go-epik-gateway/app/config"
 	"github.com/sirupsen/logrus"
 	nebula "github.com/vesoft-inc/nebula-go/v2"
 	"golang.org/x/xerrors"

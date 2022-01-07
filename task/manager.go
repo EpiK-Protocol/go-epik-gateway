@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/EpiK-Protocol/go-epik-data/app/config"
-	"github.com/EpiK-Protocol/go-epik-data/storage"
-	"github.com/EpiK-Protocol/go-epik-data/utils/logging"
+	"github.com/EpiK-Protocol/go-epik-gateway/app/config"
+	"github.com/EpiK-Protocol/go-epik-gateway/storage"
+	"github.com/EpiK-Protocol/go-epik-gateway/utils/logging"
 	"github.com/asaskevich/EventBus"
 	"github.com/sirupsen/logrus"
 )

@@ -8,12 +8,12 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/EpiK-Protocol/go-epik-data/api"
-	"github.com/EpiK-Protocol/go-epik-data/app/config"
-	"github.com/EpiK-Protocol/go-epik-data/service"
-	"github.com/EpiK-Protocol/go-epik-data/storage"
-	"github.com/EpiK-Protocol/go-epik-data/task"
-	"github.com/EpiK-Protocol/go-epik-data/utils/logging"
+	"github.com/EpiK-Protocol/go-epik-gateway/api"
+	"github.com/EpiK-Protocol/go-epik-gateway/app/config"
+	"github.com/EpiK-Protocol/go-epik-gateway/service"
+	"github.com/EpiK-Protocol/go-epik-gateway/storage"
+	"github.com/EpiK-Protocol/go-epik-gateway/task"
+	"github.com/EpiK-Protocol/go-epik-gateway/utils/logging"
 
 	"github.com/asaskevich/EventBus"
 )

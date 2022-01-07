@@ -3,7 +3,7 @@ package storage
 import (
 	"sync"
 
-	byteutils "github.com/EpiK-Protocol/go-epik-data/utils/bytesutils"
+	byteutils "github.com/EpiK-Protocol/go-epik-gateway/utils/bytesutils"
 )
 
 // MemoryStorage the nodes in trie.

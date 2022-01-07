@@ -10,7 +10,7 @@ import (
 	metrics "github.com/libp2p/go-libp2p-metrics"
 	protocol "github.com/libp2p/go-libp2p-protocol"
 
-	"github.com/EpiK-Protocol/go-epik-data/epik/api"
+	"github.com/EpiK-Protocol/go-epik-gateway/epik/api"
 )
 
 type CommonStruct struct {

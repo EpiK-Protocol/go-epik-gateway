@@ -1,4 +1,4 @@
-module github.com/EpiK-Protocol/go-epik-data
+module github.com/EpiK-Protocol/go-epik-gateway
 
 go 1.16
 

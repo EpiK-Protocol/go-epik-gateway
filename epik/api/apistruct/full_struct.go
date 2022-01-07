@@ -18,7 +18,7 @@ import (
 	"github.com/filecoin-project/go-state-types/dline"
 	stnetwork "github.com/filecoin-project/go-state-types/network"
 
-	"github.com/EpiK-Protocol/go-epik-data/epik/api"
+	"github.com/EpiK-Protocol/go-epik-gateway/epik/api"
 	"github.com/EpiK-Protocol/go-epik/chain/actors/builtin/expert"
 	"github.com/EpiK-Protocol/go-epik/chain/actors/builtin/govern"
 	"github.com/EpiK-Protocol/go-epik/chain/actors/builtin/knowledge"

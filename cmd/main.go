@@ -12,9 +12,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 
-	"github.com/EpiK-Protocol/go-epik-data/app"
-	"github.com/EpiK-Protocol/go-epik-data/app/config"
-	"github.com/EpiK-Protocol/go-epik-data/utils/logging"
+	"github.com/EpiK-Protocol/go-epik-gateway/app"
+	"github.com/EpiK-Protocol/go-epik-gateway/app/config"
+	"github.com/EpiK-Protocol/go-epik-gateway/utils/logging"
 )
 
 var (

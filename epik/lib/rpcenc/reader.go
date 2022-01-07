@@ -18,7 +18,7 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 	"golang.org/x/xerrors"
 
-	"github.com/EpiK-Protocol/go-epik-data/epik/lib/nullreader"
+	"github.com/EpiK-Protocol/go-epik-gateway/epik/lib/nullreader"
 
 	"github.com/filecoin-project/go-jsonrpc"
 	"github.com/filecoin-project/go-state-types/abi"

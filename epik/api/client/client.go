@@ -6,8 +6,8 @@ import (
 
 	"github.com/filecoin-project/go-jsonrpc"
 
-	"github.com/EpiK-Protocol/go-epik-data/epik/api"
-	"github.com/EpiK-Protocol/go-epik-data/epik/api/apistruct"
+	"github.com/EpiK-Protocol/go-epik-gateway/epik/api"
+	"github.com/EpiK-Protocol/go-epik-gateway/epik/api/apistruct"
 )
 
 // NewCommonRPC creates a new http jsonrpc client.

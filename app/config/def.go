@@ -3,7 +3,7 @@ package config
 import (
 	"io/ioutil"
 
-	"github.com/EpiK-Protocol/go-epik-data/utils/logging"
+	"github.com/EpiK-Protocol/go-epik-gateway/utils/logging"
 	"github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )

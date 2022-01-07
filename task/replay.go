@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/EpiK-Protocol/go-epik-data/app/config"
-	"github.com/EpiK-Protocol/go-epik-data/storage"
+	"github.com/EpiK-Protocol/go-epik-gateway/app/config"
+	"github.com/EpiK-Protocol/go-epik-gateway/storage"
 	"github.com/asaskevich/EventBus"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"

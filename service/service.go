@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/EpiK-Protocol/go-epik-data/app/config"
-	"github.com/EpiK-Protocol/go-epik-data/storage"
+	"github.com/EpiK-Protocol/go-epik-gateway/app/config"
+	"github.com/EpiK-Protocol/go-epik-gateway/storage"
 	"github.com/sirupsen/logrus"
 )
 

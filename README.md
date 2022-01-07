@@ -1,17 +1,19 @@
-# go-epik-data
+# go-epik-gateway
 
-go-epik-data handle the epik's expert data retrieved and replay the graph sql.
+go-epik-gateway handle the epik's expert data retrieved and replay the graph sql.
 Then users can explorer the graph data in brower.
 
 ## usage
 
 ### build 
+build the gateway node with [go](https://go.dev/) installed.
 
 ```
 make
 ```
 
 ### config
+The Epik Gateway needs to be configured with the [Epik](https://github.com/epiK-Protocol/go-epik) and [NEBULA](https://docs.nebula-graph.com.cn/2.6.1/) nodes to enable the Gateway to retrieve domain expert data and import it into nebula's diagram database.
 
 ```
 app:
@@ -21,21 +23,23 @@ app:
     key_path: ~/.ssh/id_rsa
 
 storage:
-    db_dir: .epikgraphdata
-    data_dir: data
+    db_dir: .epikgraphdata #graph storage path.
+    data_dir: data #local data storage path.
 
 server:
-    port: 8080
+    port: 8080 #local graph sever port.
 
-chains:
+# epik node config
+chains: 
 -   
-    ssh_host: "xx.xx.xx.xx"
-    ssh_port: 22
-    ssh_user: ""#root/
-    miner: "f0xxx"
-    rpc_host: "http://xxx"
-    rpc_token: "xxx"
+    ssh_host: "xx.xx.xx.xx" #epik node host
+    ssh_port: 22 # epik node port
+    ssh_user: "root" # epik node user
+    miner: "f0xxx" #retrieve miner
+    rpc_host: "http://xxx" #epik node rpc host,eg:http://xxx.xxx.xxx.xxx:1234
+    rpc_token: "xxx" # epik node api token.
 
+# nebula graph sql config
 nebula:
     address: xx.xx.xx.xx
     port: 9669
@@ -46,9 +50,9 @@ nebula:
 ### start service
 
 ```
-./epik-graph
+./epik-gateway
 ```
 
 ### open the graph explorer
 
-After `epik-graph` node start, open `epik-graph-explorer/index.html` to browse graph data.
+After `epik-gateway` node start, open `epik-graph-explorer/index.html` to browse graph data.
