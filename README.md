@@ -47,12 +47,12 @@ nebula:
     password:
 ```
 
-### start service
+### Start Gateway
 
 ```
 ./epik-gateway
 ```
 
-### open the graph explorer
+### Explore AI Data
 
 After `epik-gateway` node start, open `epik-graph-explorer/index.html` to browse graph data.
