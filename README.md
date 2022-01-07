@@ -21,7 +21,7 @@ make
 ```
 
 ### Config
-Your gateway node needs to be connected with an [EpiK](https://github.com/epiK-Protocol/go-epik) node and a [NEBULA](https://docs.nebula-graph.io/2.6.1/) node to retrieve AI data from EpiK Protocol network and import it into a nebula graph database.
+Your gateway node needs to be connected with an [EpiK](https://github.com/epiK-Protocol/go-epik) node and a [Nebula](https://docs.nebula-graph.io/2.6.1/) node to retrieve AI data from EpiK Protocol network and import it into a nebula graph database.
 
 ```
 # gateway node
