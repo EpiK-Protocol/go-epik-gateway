@@ -1,6 +1,6 @@
 # EpiK Gateway
 
-go-epik-gateway help you retrieve and index AI data from EpiK Protocol network.
+EpiK Gateway will help you retrieve and index AI data from EpiK Protocol network.
 
 ## Usage
 
