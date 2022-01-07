@@ -3,17 +3,17 @@
 go-epik-gateway handle the epik's expert data retrieved and replay the graph sql.
 Then users can explorer the graph data in brower.
 
-## usage
+## Usage
 
-### build 
+### Build 
 build the gateway node with [go](https://go.dev/) installed.
 
 ```
 make
 ```
 
-### config
-The Epik Gateway needs to be configured with the [Epik](https://github.com/epiK-Protocol/go-epik) and [NEBULA](https://docs.nebula-graph.com.cn/2.6.1/) nodes to enable the Gateway to retrieve domain expert data and import it into nebula's diagram database.
+### Config
+The EpiK Gateway needs to be configured with the [EpiK](https://github.com/epiK-Protocol/go-epik) and [NEBULA](https://docs.nebula-graph.com.cn/2.6.1/) nodes to enable the Gateway to retrieve domain expert data and import it into nebula's diagram database.
 
 ```
 app:
