@@ -64,3 +64,28 @@ nebula:
 ### Explore AI Data
 
 After `epik-gateway` node start, open `epik-graph-explorer/index.html` to browse graph data.
+
+### Expert AI Data snapshot
+
+All AI data is exported and snapshots of the data are stored and available for download.
+
+#### CrossmodalSearch
+
+expert:f0156987
+
+* [CrossmodalSearch_vertex.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/CrossmodalSearch_vertex.csv)
+* [CrossmodalSearch_edge.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/CrossmodalSearch_edge.csv)
+
+#### SmartTransport
+
+expert: f0156829
+
+* [SmartTransport_vertex.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/SmartTransport_vertex.csv)
+* [SmartTransport_edge.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/SmartTransport_edge.csv)
+
+#### GeneralVoice
+
+expert: f01111430
+
+* [GeneralVoice_vertex.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/GeneralVoice_vertex.csv)
+* [GeneralVoice_edge.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/GeneralVoice_edge.csv)
