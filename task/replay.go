@@ -22,6 +22,7 @@ import (
 var (
 	ReplayFilesKey = []byte("task:replay")
 	nebLog         = nebula.DefaultLogger{}
+	ReservedFields = []string{"GO", "AS", "TO", "OR", "AND", "XOR", "USE", "SET", "FROM", "WHERE", "MATCH", "INSERT", "YIELD", "RETURN", "DESCRIBE", "DESC", "VERTEX", "VERTICES", "EDGE", "EDGES", "UPDATE", "UPSERT", "WHEN", "DELETE", "FIND", "LOOKUP", "ALTER", "STEPS", "STEP", "OVER", "UPTO", "REVERSELY", "INDEX", "INDEXES", "REBUILD", "BOOL", "INT8", "INT16", "INT32", "INT64", "INT", "FLOAT", "DOUBLE", "STRING", "FIXED_STRING", "TIMESTAMP", "DATE", "TIME", "DATETIME", "TAG", "TAGS", "UNION", "INTERSECT", "MINUS", "NO", "OVERWRITE", "SHOW", "ADD", "CREATE", "DROP", "REMOVE", "IF", "NOT", "EXISTS", "WITH", "CHANGE", "GRANT", "REVOKE", "ON", "BY", "IN", "NOT_IN", "DOWNLOAD", "GET", "OF", "ORDER", "INGEST", "COMPACT", "FLUSH", "SUBMIT", "ASC", "ASCENDING", "DESCENDING", "DISTINCT", "FETCH", "PROP", "BALANCE", "STOP", "LIMIT", "OFFSET", "IS", "NULL", "RECOVER", "EXPLAIN", "PROFILE", "FORMAT", "CASE"}
 )
 
 type WriteRecord struct {
@@ -47,12 +48,6 @@ type replayTask struct {
 }
 
 func newReplayTask(conf config.Config, st storage.Storage, bus EventBus.Bus) (*replayTask, error) {
-	if len(conf.App.KeyPath) == 0 {
-		return nil, xerrors.New("need keyPath config")
-	}
-	if len(conf.Chains) == 0 {
-		return nil, xerrors.New("need chains config")
-	}
 
 	task := &replayTask{
 		conf:         conf,
@@ -146,7 +141,7 @@ func (t *replayTask) handleReplaies(ctx context.Context) error {
 				"id":     file.ID,
 				"status": file.Status,
 			}).Error("file not download for replay.")
-			t.bus.Publish(FileEventDownloaded, file.ID)
+			t.bus.Publish(FileEventNeedDownload, file.ID)
 			continue
 		}
 		if err := t.replayFile(file); err != nil {
@@ -216,9 +211,9 @@ func (t *replayTask) replayFile(file *FileRef) error {
 	}
 	if err != nil {
 		log.WithFields(logrus.Fields{
-			"file":   file,
-			"record": record,
-			"error":  err,
+			"fileRef": file,
+			"record":  record,
+			"error":   err,
 		}).Error("write nebula failed.")
 		return err
 	}
@@ -319,6 +314,13 @@ func (t *replayTask) readFileAndWrite(file *FileRef, record *WriteRecord) (int64
 					record.Domain = domain
 				}
 			}
+			if len(domain) == 0 {
+				domain = t.conf.Server.ExpertSpaces[file.Expert]
+				record.Domain = domain
+				if len(domain) == 0 {
+					return line - 1, fmt.Errorf("failed to find domain. expert:%s, index:%d", file.Expert, record.Index)
+				}
+			}
 			if err := t.writeToNebulaSql(line, domain, content); err != nil {
 				return line - 1, err
 			}
@@ -386,13 +388,21 @@ func (t *replayTask) writeToNebulaSql(line int64, space string, content string) 
 			strs := strings.Split(content, "(")
 			strs = strings.Split(strs[0], " ")
 			tag := strs[len(strs)-1]
-			sql += fmt.Sprintf("CREATE TAG INDEX IF NOT EXISTS i_%s_value on %s(value(16));", tag, tag)
-		}
-		if strings.Contains(strings.ToUpper(sql), "CREATE EDGE") {
+			wrap := tag
+			sql, wrap = replaceReservedFields(sql, tag)
+			sql += fmt.Sprintf("CREATE TAG INDEX IF NOT EXISTS i_%s_value on %s(value(16));", tag, wrap)
+		} else if strings.Contains(strings.ToUpper(sql), "CREATE EDGE") {
 			strs := strings.Split(content, "(")
 			strs = strings.Split(strs[0], " ")
 			edge := strs[len(strs)-1]
-			sql += fmt.Sprintf("CREATE EDGE INDEX IF NOT EXISTS i_%s_name on %s(name(16));", edge, edge)
+			wrap := edge
+			sql, wrap = replaceReservedFields(sql, edge)
+			sql += fmt.Sprintf("CREATE EDGE INDEX IF NOT EXISTS i_%s_name on %s(name(16));", edge, wrap)
+		} else {
+			strs := strings.Split(content, "(")
+			strs = strings.Split(strs[0], " ")
+			sfield := strs[len(strs)-1]
+			sql, _ = replaceReservedFields(sql, sfield)
 		}
 		// sql = fmt.Sprintf("DROP SPACE IF EXISTS %s;", space)
 		resultSet, err := session.Execute(sql)
@@ -403,10 +413,48 @@ func (t *replayTask) writeToNebulaSql(line int64, space string, content string) 
 			return xerrors.Errorf("nebula execute error line:%d, sql:%s, code:%d, message:%s", line, sql, resultSet.GetErrorCode(), resultSet.GetErrorMsg())
 		}
 		if strings.Contains(strings.ToUpper(sql), "CREATE") {
-			time.Sleep(10 * time.Second)
+			time.Sleep(5 * time.Second)
 		}
 	}
 	return nil
+}
+
+func replaceReservedFields(sql string, sfield string) (string, string) {
+	for _, field := range ReservedFields {
+		if field == strings.ToUpper(sfield) {
+			upSql := strings.ToUpper(sql)
+			fields := make(map[int]string)
+			for {
+				i := strings.Index(upSql, strings.ToUpper(sfield))
+				if i == -1 {
+					break
+				}
+				start := len(sql) - len(upSql) + i
+				fields[start] = sql[start : start+len(field)]
+				upSql = upSql[i+len(sfield):]
+			}
+			sfields := []string{}
+			for i, f := range fields {
+				if i > 0 && (sql[i-1:i] == " " || sql[i-1:i] == "`" || sql[i-1:i] == "\"" || sql[i-1:i] == "'") {
+					sfields = append(sfields, f)
+				}
+			}
+			wrapSql := sql
+			for _, sf := range sfields {
+				wrap := fmt.Sprintf("`%s`", sf)
+				wrapSql = strings.ReplaceAll(wrapSql, sf, wrap)
+			}
+
+			log.WithFields(logrus.Fields{
+				"fields":  sfields,
+				"sql":     sql,
+				"wrapSql": wrapSql,
+			}).Warn("replace for reserved fields.")
+			// panic(sql)
+			return wrapSql, fmt.Sprintf("`%s`", sfield)
+		}
+	}
+	return sql, sfield
 }
 
 // func (t *replayTask) createTagIndex(domain string) error {

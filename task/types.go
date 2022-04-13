@@ -104,3 +104,27 @@ func getFileMd5(path string) (string, error) {
 
 	return hex.EncodeToString(md5h.Sum(nil)), nil
 }
+
+type ResponseCode struct {
+	Code    int64
+	Message string
+}
+
+type ListResponse struct {
+	Code            ResponseCode
+	List            []ListData
+	Callback        string `json:"callback"`
+	OnchainCallback string `json:"onchain_callback"`
+}
+
+type ListData struct {
+	Id       string `json:"id"`
+	Expert   string `json:"expert"`
+	Index    int64  `json:"index"`
+	FileName string `json:"file_name"`
+	FileUrl  string `json:"file_url"`
+	Status   string `json:"status"`
+	Count    int64  `json:"count"`
+	FileSize int64  `json:"file_size"` //文件大小
+	CheckSum string `json:"check_sum"` //文件md5
+}

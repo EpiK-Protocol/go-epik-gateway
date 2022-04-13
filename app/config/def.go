@@ -34,7 +34,11 @@ type Server struct {
 	// Host string
 	Port int64 `yaml:"port"`
 
-	Experts []string `yaml:"experts"`
+	Experts      []string          `yaml:"experts"`
+	ExpertSpaces map[string]string `yaml:"expert_spaces"`
+
+	EnableDownload bool   `yaml:"enable_download"`
+	DownloadUrl    string `yaml:"download_url"`
 }
 
 type Storage struct {

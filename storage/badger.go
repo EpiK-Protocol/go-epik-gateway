@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"os"
 	"sync"
 
 	byteutils "github.com/EpiK-Protocol/go-epik-gateway/utils/bytesutils"
@@ -27,6 +28,10 @@ type batchOpt struct {
 func NewBadgerStorage(path string) (*BadgerStorage, error) {
 	if len(path) == 0 {
 		return nil, xerrors.Errorf("need storage path.")
+	}
+	err := os.MkdirAll(path, os.ModePerm)
+	if err != nil {
+		return nil, err
 	}
 	opts := badger.DefaultOptions("").
 		WithNumVersionsToKeep(1).

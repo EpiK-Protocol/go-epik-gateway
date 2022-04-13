@@ -2,6 +2,7 @@ package api
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -48,7 +49,7 @@ func (a *API) GraphExport(ctx *gin.Context) {
 		return
 	}
 
-	// path := req.Path
+	basePath := req.Path
 
 	// log.WithFields(logrus.Fields{
 	// 	"sql": sql,
@@ -91,9 +92,9 @@ func (a *API) GraphExport(ctx *gin.Context) {
 		}
 	}
 
-	rdfs := []string{}
-	vertexs := []string{}
-	edges := []string{}
+	// rdfs := []string{}
+	vertexs := []string{"id,attributes"}
+	edges := []string{"type,src,dst,rank,name,attributes"}
 	for _, vertex := range ids {
 		sql := fmt.Sprintf("USE %s;GET SUBGRAPH WITH PROP 1 STEPS FROM '%s';", space, vertex)
 		results, err := a.service.Nebula().Query(sql)
@@ -113,19 +114,35 @@ func (a *API) GraphExport(ctx *gin.Context) {
 							id := meta["id"].(string)
 							irow := data.Row[idx].([]interface{})
 							drow := irow[iidex].(map[string]interface{})
-							for key, val := range drow {
-								line := id + "," + key + "," + val.(string)
-								vertexs = append(vertexs, line)
-								rdfs = append(rdfs, line)
+							attribute, err := json.Marshal(drow)
+							if err != nil {
+								responseJSON(ctx, serverError(err))
+								return
 							}
+							line := id + "," + string(attribute)
+							vertexs = append(vertexs, line)
+							// for key, val := range drow {
+							// 	line := id + "," + key + "," + val.(string)
+							// 	vertexs = append(vertexs, line)
+							// 	rdfs = append(rdfs, line)
+							// }
 						} else if mtype == "edge" {
 							id := meta["id"].(map[string]interface{})
+							types := id["type"].(float64)
 							src := id["src"].(string)
 							dst := id["dst"].(string)
 							name := id["name"].(string)
-							line := src + "," + dst + "," + name
+							rank := id["ranking"].(float64)
+							irow := data.Row[idx].([]interface{})
+							drow := irow[iidex].(map[string]interface{})
+							attribute, err := json.Marshal(drow)
+							if err != nil {
+								responseJSON(ctx, serverError(err))
+								return
+							}
+							line := fmt.Sprintf("%.0f,%s,%s,%.0f,%s,%s", types, src, dst, rank, name, string(attribute))
 							edges = append(edges, line)
-							rdfs = append(rdfs, line)
+							// rdfs = append(rdfs, line)
 						}
 					}
 				}
@@ -133,7 +150,10 @@ func (a *API) GraphExport(ctx *gin.Context) {
 		}
 	}
 
-	go WriteFile(req.Path, rdfs, 0666)
+	vertexPath := fmt.Sprintf("%s/%s_vertex.csv", basePath, req.Space)
+	go WriteFile(vertexPath, vertexs, 0666)
+	edgePath := fmt.Sprintf("%s/%s_edge.csv", basePath, req.Space)
+	go WriteFile(edgePath, edges, 0666)
 
 	responseJSON(ctx, errOK)
 }

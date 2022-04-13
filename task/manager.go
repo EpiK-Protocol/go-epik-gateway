@@ -19,6 +19,7 @@ type TaskManager struct {
 	config  config.Config
 	storage storage.Storage
 
+	downloadTask *downloadTask
 	retrieveTask *retrieveTask
 	replayTask   *replayTask
 
@@ -28,6 +29,12 @@ type TaskManager struct {
 func NewTask(conf config.Config, st storage.Storage, bus EventBus.Bus) (Task, error) {
 
 	log = logging.Log()
+
+	downloadTask, err := newDownloadTask(conf, st, bus)
+	if err != nil {
+		return nil, err
+	}
+
 	retrieveTask, err := newRetrieveTask(conf, st, bus)
 	if err != nil {
 		return nil, err
@@ -42,6 +49,7 @@ func NewTask(conf config.Config, st storage.Storage, bus EventBus.Bus) (Task, er
 		config:  conf,
 		storage: st,
 
+		downloadTask: downloadTask,
 		retrieveTask: retrieveTask,
 		replayTask:   replayTask,
 	}, nil
@@ -66,11 +74,19 @@ func (t *TaskManager) process(ctx context.Context) {
 		default:
 		}
 
-		go func() {
-			if err := t.retrieveTask.process(ctx); err != nil {
-				log.Errorf("failed to retrieve: %v", err)
-			}
-		}()
+		if t.config.Server.EnableDownload {
+			go func() {
+				if err := t.downloadTask.process(ctx); err != nil {
+					log.Errorf("failed to download: %v", err)
+				}
+			}()
+		} else {
+			go func() {
+				if err := t.retrieveTask.process(ctx); err != nil {
+					log.Errorf("failed to retrieve: %v", err)
+				}
+			}()
+		}
 
 		go func() {
 			if err := t.replayTask.process(ctx); err != nil {
@@ -98,6 +114,7 @@ func (t *TaskManager) Stop(ctx context.Context) error {
 	log.Info("stop task.")
 	t.stop <- true
 
+	t.downloadTask.stop()
 	t.retrieveTask.stop()
 	t.replayTask.stop()
 

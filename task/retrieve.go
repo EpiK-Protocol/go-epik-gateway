@@ -60,6 +60,8 @@ func newRetrieveTask(conf config.Config, st storage.Storage, bus EventBus.Bus) (
 		page:         make(map[string]uint64),
 	}
 
+	task.bus.Subscribe(FileEventNeedDownload, task.handleNeedDownload)
+
 	return task, nil
 }
 
