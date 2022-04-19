@@ -89,3 +89,27 @@ expert: f01111430
 
 * [GeneralVoice_vertex.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/GeneralVoice_vertex.csv)
 * [GeneralVoice_edge.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/GeneralVoice_edge.csv)
+
+### Data Import
+
+You can import graph data such as [neo4j](https://neo4j.com/developer/guide-import-csv/) using snapshot files.
+
+Import Guide:
+
+* Install [neo4j](https://neo4j.com/docs/getting-started/current/get-started-with-neo4j/)
+* Split vertex csv files of domain experts and export them into entity ids and attributes according to different labels
+* Import data into Neo4J by entity and relationship ids and attributes.
+    * Example:
+
+    ```
+    
+    // 1. load crossmodalSearch Commodity vertex
+    LOAD CSV WITH HEADERS FROM 'file:///crossmodalSearch_commodity_vertex.csv' AS row MERGE (e:Commodity {id: row.Id, value: row.Value})
+    
+    // 2. load crossmodalSearch other vertex
+
+    // 3. load crossmodalSearch edge
+   LOAD CSV WITH HEADERS FROM "file:///crossmodalSearch_edge.csv" AS line match (from:person{id:line.src}),(to:person{id:line.dst})
+   merge (from)-[r:rel{name:line.name}]->(to)
+
+    ```
