@@ -72,7 +72,6 @@ All AI data is exported and snapshots of the data are stored and available for d
 #### CrossmodalSearch
 
 expert:f0156987
-Schema and Example:
 
 ![alt Schema and Example](doc/CrossmodalSearch.png)
 
@@ -84,7 +83,6 @@ Schema and Example:
 #### SmartTransport
 
 expert: f0156829
-Schema and Example:
 
 ![alt Schema and Example](doc/SmartTransport.png)
 
@@ -94,7 +92,6 @@ Schema and Example:
 #### GeneralVoice
 
 expert: f01111430
-Schema and Example:
 
 ![alt Schema and Example](doc/GeneralVoice.png)
 
