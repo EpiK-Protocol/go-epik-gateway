@@ -72,6 +72,11 @@ All AI data is exported and snapshots of the data are stored and available for d
 #### CrossmodalSearch
 
 expert:f0156987
+Schema and Example:
+
+![alt Schema and Example](doc/CrossmodalSearch.png)
+
+
 
 * [CrossmodalSearch_vertex.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/CrossmodalSearch_vertex.csv)
 * [CrossmodalSearch_edge.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/CrossmodalSearch_edge.csv)
@@ -79,6 +84,9 @@ expert:f0156987
 #### SmartTransport
 
 expert: f0156829
+Schema and Example:
+
+![alt Schema and Example](doc/SmartTransport.png)
 
 * [SmartTransport_vertex.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/SmartTransport_vertex.csv)
 * [SmartTransport_edge.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/SmartTransport_edge.csv)
@@ -86,6 +94,9 @@ expert: f0156829
 #### GeneralVoice
 
 expert: f01111430
+Schema and Example:
+
+![alt Schema and Example](doc/GeneralVoice.png)
 
 * [GeneralVoice_vertex.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/GeneralVoice_vertex.csv)
 * [GeneralVoice_edge.csv](https://s3.ap-northeast-1.amazonaws.com/cdn.epikg.com/expert-data/20220413/GeneralVoice_edge.csv)
